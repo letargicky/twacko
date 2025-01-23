@@ -17,6 +17,11 @@ app.use(express.json()); // Na spracovanie JSON requestov
 // Cesta ku users.json
 const configPath = path.join(__dirname, 'users.json');
 
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Login endpoint
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
