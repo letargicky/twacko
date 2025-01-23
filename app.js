@@ -23,36 +23,41 @@ app.get('/', (req, res) => {
 });
 
 // Login endpoint
-app.get('/login', (req, res) => {
+const loadUsers = () => {
+    if (!fs.existsSync(dataFilePath)) {
+        fs.writeFileSync(dataFilePath, JSON.stringify([]));
+    }
+    return JSON.parse(fs.readFileSync(dataFilePath, 'utf8'));
+};
+
+// Pomocná funkcia na uloženie používateľov
+const saveUsers = (users) => {
+    fs.writeFileSync(dataFilePath, JSON.stringify(users, null, 2));
+};
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Login endpoint
+app.post('/login', (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ message: 'Email a heslo su povinne.' });
     }
 
-    // Precitaj aktualnych pouzivatelov zo suboru
-    fs.readFile(dataFilePath, 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).json({ message: 'Nepodarilo sa precitat data o pouzivateloch.' });
-        }
+    const users = loadUsers();
+    const user = users.find(user => user.email === email);
 
-        const users = JSON.parse(data || '[]');
-        const user = users.find(user => user.email === email);
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+        return res.status(400).json({ message: 'Nespravny email alebo heslo.' });
+    }
 
-        if (!user) {
-            return res.status(400).json({ message: 'Nespravny email alebo heslo.' });
-        }
-
-        // Porovnaj heslo
-        const isMatch = bcrypt.compareSync(password, user.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: 'Nespravny email alebo heslo.' });
-        }
-
-        res.status(200).json({ message: 'Prihlasenie bolo uspesne.' });
-    });
+    res.status(200).json({ message: 'Prihlasenie bolo uspesne.' });
 });
 
+// Register endpoint
 app.post('/register', (req, res) => {
     const { email, username, password, age, gender, socialNetworks, interests } = req.body;
 
@@ -60,38 +65,18 @@ app.post('/register', (req, res) => {
         return res.status(400).json({ message: 'Vsetky polia su povinne.' });
     }
 
-    // Precitaj aktualnych pouzivatelov zo suboru
-    fs.readFile(dataFilePath, 'utf8', (err, data) => {
-        if (err) {
-            return res.status(500).json({ message: 'Nepodarilo sa precitat data o pouzivateloch.' });
-        }
+    let users = loadUsers();
+    const existingUser = users.find(user => user.email === email);
 
-        const users = JSON.parse(data || '[]');
-        const existingUser = users.find(user => user.email === email);
+    if (existingUser) {
+        return res.status(400).json({ message: 'Pouzivatel uz existuje.' });
+    }
 
-        if (existingUser) {
-            return res.status(400).json({ message: 'Pouzivatel uz existuje.' });
-        }
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    users.push({ email, username, password: hashedPassword, age, gender, socialNetworks, interests });
+    saveUsers(users);
 
-        // Zahashuj heslo a uloz noveho pouzivatela
-        const hashedPassword = bcrypt.hashSync(password, 10);
-        users.push({
-            email,
-            username,
-            password: hashedPassword,
-            age,
-            gender,
-            socialNetworks,
-            interests
-        });
-
-        fs.writeFile(dataFilePath, JSON.stringify(users, null, 2), err => {
-            if (err) {
-                return res.status(500).json({ message: 'Nepodarilo sa ulozit data o pouzivateloch.' });
-            }
-            res.status(201).json({ message: 'Pouzivatel bol uspesne zaregistrovany.' });
-        });
-    });
+    res.status(201).json({ message: 'Pouzivatel bol uspesne zaregistrovany.' });
 });
 
 app.post("/users/create", (req, res) => {
