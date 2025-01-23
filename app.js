@@ -3,6 +3,7 @@ const crypto = require('crypto')
 const cors = require('cors')
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const port = 8000;
