@@ -1,7 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
-const bcrypt = require('bcryptjs');
 const { put, get } = require('@vercel/blob');
 
 const app = express();
@@ -37,6 +36,19 @@ async function ulozPouzivatelov(users) {
   }
 }
 
+// Funkcia na hashovanie hesla
+function hashPassword(password) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return { salt, hash };
+}
+
+// Funkcia na overenie hesla
+function verifyPassword(password, salt, hash) {
+  const newHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+  return newHash === hash;
+}
+
 // Základná routa
 app.get('/', (req, res) => {
   res.send('Vitajte na serveri!');
@@ -59,60 +71,6 @@ app.post('/users/create', async (req, res) => {
   res.status(201).json(newUser);
 });
 
-// Endpoint na zoznam používateľov
-app.get('/users/list', async (req, res) => {
-  const users = await nacitajPouzivatelov();
-  res.json(users);
-});
-
-// Endpoint na zobrazenie konkrétneho používateľa
-app.get('/users/read', async (req, res) => {
-  const { id } = req.query;
-  const users = await nacitajPouzivatelov();
-  const user = users.find((u) => u.id === id);
-
-  if (!user) {
-    return res.status(404).json({ error: 'Používateľ nenájdený.' });
-  }
-
-  res.json(user);
-});
-
-// Endpoint na aktualizáciu používateľa
-app.put('/users/update', async (req, res) => {
-  const { id, username, age, gender, socialNetworks, interests } = req.body;
-  const users = await nacitajPouzivatelov();
-  const user = users.find((u) => u.id === id);
-
-  if (!user) {
-    return res.status(404).json({ error: 'Používateľ nenájdený.' });
-  }
-
-  if (username) user.username = username;
-  if (age) user.age = age;
-  if (gender) user.gender = gender;
-  if (socialNetworks) user.socialNetworks = socialNetworks;
-  if (interests) user.interests = interests;
-
-  await ulozPouzivatelov(users);
-  res.json(user);
-});
-
-// Endpoint na odstránenie používateľa
-app.post('/users/delete', async (req, res) => {
-  const { id } = req.body;
-  const users = await nacitajPouzivatelov();
-  const index = users.findIndex((u) => u.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ error: 'Používateľ nenájdený.' });
-  }
-
-  users.splice(index, 1);
-  await ulozPouzivatelov(users);
-  res.json({ message: 'Používateľ úspešne odstránený.' });
-});
-
 // Endpoint na registráciu používateľa
 app.post('/register', async (req, res) => {
   const { email, username, password, age, gender, socialNetworks, interests } = req.body;
@@ -126,8 +84,8 @@ app.post('/register', async (req, res) => {
     return res.status(400).json({ message: 'Používateľ už existuje.' });
   }
 
-  const hashedPassword = bcrypt.hashSync(password, 10);
-  users.push({ email, username, password: hashedPassword, age, gender, socialNetworks, interests });
+  const { salt, hash } = hashPassword(password);
+  users.push({ email, username, passwordHash: hash, salt, age, gender, socialNetworks, interests });
 
   await ulozPouzivatelov(users);
   res.status(201).json({ message: 'Používateľ bol úspešne zaregistrovaný.' });
@@ -148,7 +106,7 @@ app.post('/login', async (req, res) => {
     return res.status(401).json({ message: 'Nesprávny email alebo heslo.' });
   }
 
-  const isMatch = bcrypt.compareSync(password, user.password);
+  const isMatch = verifyPassword(password, user.salt, user.passwordHash);
   if (!isMatch) {
     return res.status(401).json({ message: 'Nesprávny email alebo heslo.' });
   }
