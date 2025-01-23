@@ -1,7 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const { put, get } = require('@vercel/blob');
 
 const app = express();
