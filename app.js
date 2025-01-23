@@ -24,7 +24,32 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const BLOB_URL = 'https://lovably.vercel.app/users.json';
+const BLOB_URL = 'https://osmlu7cyjhebbdpp.public.blob.vercel-storage.com/usr/users-Tjs9UZGKNBkeiTal87UbrsJ6CiS378.json';
+
+// Funkcia na načítanie používateľov
+async function nacitajPouzivatelov() {
+  try {
+      const response = await get(BLOB_URL);
+      const users = await response.json();
+      return users || [];
+  } catch (error) {
+      console.error('Chyba pri načítaní používateľov:', error);
+      return [];
+  }
+}
+
+// Funkcia na uloženie používateľov
+async function ulozPouzivatelov(users) {
+  const jsonString = JSON.stringify(users, null, 2);
+  try {
+      await put('users.json', jsonString, {
+          access: 'public', // Alebo 'private' pre obmedzenie prístupu
+          contentType: 'application/json'
+      });
+  } catch (error) {
+      console.error('Chyba pri ukladaní používateľov:', error);
+  }
+}
 
 // Funkcia na načítanie používateľov
 async function nacitajPouzivatelov() {
