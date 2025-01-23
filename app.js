@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
 });
 
 // Login endpoint
-app.post('/login', (req, res) => {
+app.get('/login', (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
