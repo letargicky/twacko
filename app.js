@@ -19,65 +19,85 @@ app.use(express.json()); // Na spracovanie JSON requestov
 const configPath = path.join(__dirname, 'users.json');
 
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Login endpoint
-const loadUsers = () => {
-    if (!fs.existsSync(dataFilePath)) {
-        fs.writeFileSync(dataFilePath, JSON.stringify([]));
-    }
-    return JSON.parse(fs.readFileSync(dataFilePath, 'utf8'));
-};
-
-// Pomocná funkcia na uloženie používateľov
-const saveUsers = (users) => {
-    fs.writeFileSync(dataFilePath, JSON.stringify(users, null, 2));
-};
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+const BLOB_URL = 'https://lovably.vercel.app/users.json';
+
+// Funkcia na načítanie používateľov
+async function nacitajPouzivatelov() {
+  try {
+      const response = await get(BLOB_URL);
+      const users = await response.json();
+      return users || [];
+  } catch (error) {
+      console.error('Chyba pri načítaní používateľov:', error);
+      return [];
+  }
+}
+
+// Funkcia na uloženie používateľov
+async function ulozPouzivatelov(users) {
+  const jsonString = JSON.stringify(users, null, 2);
+  try {
+      await put('users.json', jsonString, {
+          access: 'public', // Alebo 'private' pre obmedzenie prístupu
+          contentType: 'application/json'
+      });
+  } catch (error) {
+      console.error('Chyba pri ukladaní používateľov:', error);
+  }
+}
+
 // Login endpoint
-app.post('/login', (req, res) => {
-    const { email, password } = req.body;
+app.post('/register', async (req, res) => {
+  const { email, username, password, age, gender, socialNetworks, interests } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ message: 'Email a heslo su povinne.' });
-    }
+  if (!email || !username || !password || !age || !gender || !socialNetworks || !interests) {
+      return res.status(400).json({ message: 'Všetky polia sú povinné.' });
+  }
 
-    const users = loadUsers();
-    const user = users.find(user => user.email === email);
+  const users = await nacitajPouzivatelov();
+  if (users.some(user => user.email === email)) {
+      return res.status(400).json({ message: 'Používateľ už existuje.' });
+  }
 
-    if (!user || !bcrypt.compareSync(password, user.password)) {
-        return res.status(400).json({ message: 'Nespravny email alebo heslo.' });
-    }
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  users.push({ email, username, password: hashedPassword, age, gender, socialNetworks, interests });
 
-    res.status(200).json({ message: 'Prihlasenie bolo uspesne.' });
+  await ulozPouzivatelov(users);
+  res.status(201).json({ message: 'Používateľ bol úspešne zaregistrovaný.' });
 });
 
-// Register endpoint
-app.post('/register', (req, res) => {
-    const { email, username, password, age, gender, socialNetworks, interests } = req.body;
+// Login an existing user
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
 
-    if (!email || !username || !password || !age || !gender || !socialNetworks || !interests) {
-        return res.status(400).json({ message: 'Vsetky polia su povinne.' });
-    }
+  if (!email || !password) {
+      return res.status(400).json({ message: 'Email a heslo sú povinné.' });
+  }
 
-    let users = loadUsers();
-    const existingUser = users.find(user => user.email === email);
+  try {
+      const users = await loadUsers();
+      const user = users.find(user => user.email === email);
 
-    if (existingUser) {
-        return res.status(400).json({ message: 'Pouzivatel uz existuje.' });
-    }
+      if (!user) {
+          return res.status(401).json({ message: 'Nesprávny email alebo heslo.' });
+      }
 
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    users.push({ email, username, password: hashedPassword, age, gender, socialNetworks, interests });
-    saveUsers(users);
+      // Porovnanie hesla
+      const isMatch = bcrypt.compareSync(password, user.password);
+      if (!isMatch) {
+          return res.status(401).json({ message: 'Nesprávny email alebo heslo.' });
+      }
 
-    res.status(201).json({ message: 'Pouzivatel bol uspesne zaregistrovany.' });
+      res.status(200).json({ message: 'Prihlásenie bolo úspešné.', username: user.username });
+  } catch (error) {
+      console.error('Chyba pri prihlasovaní:', error);
+      res.status(500).json({ message: 'Interná chyba servera.' });
+  }
 });
 
 app.post("/users/create", (req, res) => {
@@ -165,31 +185,9 @@ app.post("/interests/delete", (req, res) => {
   res.send({ message: "Interests successfully deleted." });
 });
 
-// Login/Register Endpoints
 
-// Register a new user
-app.post("/auth/register", (req, res) => {
-  const { username, email, password } = req.body;
-  if (users.find((u) => u.email === email)) {
-    return res.status(400).json({ error: "Email is already registered." });
-  }
-  const id = crypto.randomBytes(16).toString("hex");
-  const newUser = { id, username, email, password };
-  users.push(newUser);
-  res.status(201).send(newUser);
-});
 
-// Login an existing user
-app.get("/auth/login", (req, res) => {
-  const { email, password } = req.body;
-  const user = users.find((u) => u.email === email && u.password === password);
-  if (!user) {
-    return res.status(401).json({ error: "Invalid email or password." });
-  }
-  const token = crypto.randomBytes(16).toString("hex");
-  sessions.push({ id: user.id, token });
-  res.send({ message: "Login successful.", token });
-});
+
 
 // Start the server
 app.listen(port, () => {
