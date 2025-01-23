@@ -24,74 +24,74 @@ app.get('/', (req, res) => {
 
 // Login endpoint
 app.post('/login', (req, res) => {
-  const { email, password } = req.body;
+    const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' });
-  }
-
-  fs.readFile(configPath, 'utf-8', (err, data) => {
-    if (err) {
-      console.error('Error reading config file:', err);
-      return res.status(500).json({ error: 'Internal server error.' });
+    if (!email || !password) {
+        return res.status(400).json({ message: 'Email a heslo su povinne.' });
     }
 
-    try {
-      const config = JSON.parse(data);
-      const user = config.users.find(
-        (u) => u.email === email && u.password === password
-      );
+    // Precitaj aktualnych pouzivatelov zo suboru
+    fs.readFile(dataFilePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ message: 'Nepodarilo sa precitat data o pouzivateloch.' });
+        }
 
-      if (user) {
-        return res.status(200).json({ message: 'Login successful!' });
-      } else {
-        return res.status(401).json({ error: 'Invalid email or password.' });
-      }
-    } catch (parseErr) {
-      console.error('Error parsing config file:', parseErr);
-      return res.status(500).json({ error: 'Internal server error.' });
-    }
-  });
+        const users = JSON.parse(data || '[]');
+        const user = users.find(user => user.email === email);
+
+        if (!user) {
+            return res.status(400).json({ message: 'Nespravny email alebo heslo.' });
+        }
+
+        // Porovnaj heslo
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: 'Nespravny email alebo heslo.' });
+        }
+
+        res.status(200).json({ message: 'Prihlasenie bolo uspesne.' });
+    });
 });
 
 app.post('/register', (req, res) => {
-  const { email, username, password, age, gender, socialNetworks, interests } = req.body;
+    const { email, username, password, age, gender, socialNetworks, interests } = req.body;
 
-  if (!email || !username || !password || !age || !gender || !socialNetworks || !interests) {
-    return res.status(400).json({ error: 'All fields are required.' });
-  }
-  if (isNaN(age) || age <= 0) {
-    return res.status(400).json({ error: 'Age must be a positive number.' });
-  }
-  const id = crypto.randomBytes(16).toString('hex');
-  fs.readFile(configPath, 'utf-8', (err, data) => {
-    if (err) {
-      console.error('Error reading config file:', err);
-      return res.status(500).json({ error: 'Internal server error.' });
+    if (!email || !username || !password || !age || !gender || !socialNetworks || !interests) {
+        return res.status(400).json({ message: 'Vsetky polia su povinne.' });
     }
 
-    try {
-      const config = JSON.parse(data);
-      if (config.users.some((u) => u.email === email)) {
-        return res.status(409).json({ error: 'Email already exists.' });
-      }
-      if (config.users.some((u) => u.username === username)) {
-        return res.status(409).json({ error: 'Username already exists.' });
-      }
-      const newUser = { id, email, username, password, age, gender, socialNetworks, interests };
-      config.users.push(newUser);
-      fs.writeFile(configPath, JSON.stringify(config, null, 2), (writeErr) => {
-        if (writeErr) {
-          console.error('Error writing to config file:', writeErr);
-          return res.status(500).json({ error: 'Internal server error.' });
+    // Precitaj aktualnych pouzivatelov zo suboru
+    fs.readFile(dataFilePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).json({ message: 'Nepodarilo sa precitat data o pouzivateloch.' });
         }
-        return res.status(201).json({ message: 'User registered successfully!', user: newUser });
-      });
-    } catch (parseErr) {
-      console.error('Error parsing config file:', parseErr);
-      return res.status(500).json({ error: 'Internal server error.' });
-    }
-  });
+
+        const users = JSON.parse(data || '[]');
+        const existingUser = users.find(user => user.email === email);
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'Pouzivatel uz existuje.' });
+        }
+
+        // Zahashuj heslo a uloz noveho pouzivatela
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        users.push({
+            email,
+            username,
+            password: hashedPassword,
+            age,
+            gender,
+            socialNetworks,
+            interests
+        });
+
+        fs.writeFile(dataFilePath, JSON.stringify(users, null, 2), err => {
+            if (err) {
+                return res.status(500).json({ message: 'Nepodarilo sa ulozit data o pouzivateloch.' });
+            }
+            res.status(201).json({ message: 'Pouzivatel bol uspesne zaregistrovany.' });
+        });
+    });
 });
 
 app.post("/users/create", (req, res) => {
