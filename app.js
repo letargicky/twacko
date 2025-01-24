@@ -17,7 +17,9 @@ app.use(express.json());
 
 const configPath = path.join(__dirname, 'users.json');
 
-//SIMON MARCINOV - LOGIN REGISTER
+//        ╦    ╔═╗  ╔═╗  ╦  ╔╗╔       ╦═╗  ╔═╗  ╔═╗  ╦  ╔═╗  ╔╦╗  ╔═╗  ╦═╗  
+//        ║    ║ ║  ║ ╦  ║  ║║║  ───  ╠╦╝  ║╣   ║ ╦  ║  ╚═╗   ║   ║╣   ╠╦╝  
+//        ╩═╝  ╚═╝  ╚═╝  ╩  ╝╚╝       ╩╚═  ╚═╝  ╚═╝  ╩  ╚═╝   ╩   ╚═╝  ╩╚═  - urobil Simon Marcinov
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
@@ -87,12 +89,15 @@ app.post('/register', (req, res) => {
 });
 
 
-//PETER BEDNAR - USERS
+//        ╦ ╦  ╔═╗  ╔═╗  ╦═╗  ╔═╗
+//        ║ ║  ╚═╗  ║╣   ╠╦╝  ╚═╗
+//        ╚═╝  ╚═╝  ╚═╝  ╩╚═  ╚═╝  - urobil Peter Bednar
+
 app.post("/users/create", (req, res) => {
   const { username, age, gender, socialNetworks, interests: userInterests } = req.body;
 
   if (!username || !age || !gender || !socialNetworks || !userInterests) {
-    return res.status(400).json({ error: "Missing required fields" });
+    return res.status(400).json({ error: "chybaju vyplnene polia" });
   }
 
   const id = crypto.randomBytes(16).toString("hex");
@@ -116,12 +121,12 @@ app.get("/users/read", (req, res) => {
   const { id } = req.body;
 
   if (!id) {
-    return res.status(400).json({ error: "User ID is required." });
+    return res.status(400).json({ error: "ID pouzivatela je pozadovane." });
   }
 
   const user = users.find((u) => u.id === id);
   if (!user) {
-    return res.status(404).json({ error: "User not found." });
+    return res.status(404).json({ error: "pouzivatel nebol najdeny." });
   }
 
   res.json(user);
@@ -131,7 +136,7 @@ app.put("/users/update", (req, res) => {
   const { id, username, age, gender, socialNetworks, interests } = req.body;
   const user = users.find((u) => u.id === id);
   if (!user) {
-    return res.status(404).json({ error: "User not found" });
+    return res.status(404).json({ error: "pouzivatel nebol najdeny." });
   }
   if (username) user.username = username;
   if (age) user.age = age;
@@ -139,20 +144,23 @@ app.put("/users/update", (req, res) => {
   if (socialNetworks) user.socialNetworks = socialNetworks;
   if (interests) user.interests = interests;
   res.json(user);
+  res.json({ message: "pouzivatel bol aktualizovany." });
 });
 
 app.post("/users/delete", (req, res) => {
   const { id } = req.body;
   const index = users.findIndex((u) => u.id === id);
   if (index === -1) {
-    return res.status(404).json({ error: "User not found" });
+    return res.status(404).json({ error: "pouzivatel nebol najdeny." });
   }
   users.splice(index, 1);
-  res.json({ message: "User successfully deleted" });
+  res.json({ message: "pouzivatel bol vymazany uspesne" });
 });
 
 
-//JAKUB KNUT - INTERESTS
+//        ╦  ╔╗╔  ╔╦╗  ╔═╗  ╦═╗  ╔═╗  ╔═╗  ╔╦╗  ╔═╗
+//        ║  ║║║   ║   ║╣   ╠╦╝  ║╣   ╚═╗   ║   ╚═╗
+//        ╩  ╝╚╝   ╩   ╚═╝  ╩╚═  ╚═╝  ╚═╝   ╩   ╚═╝ - urobil Jakub Knut
 
 app.get("/interests/list", (req, res) => {
   res.send(interests);
@@ -162,7 +170,7 @@ app.post("/interests/add", (req, res) => {
   const { id, interests: newInterests } = req.body;
   const user = users.find((u) => u.id === id);
   if (!user) {
-    return res.status(404).json({ error: "User not found." });
+    return res.status(404).json({ error: "pouzivatel nebol najdeny." });
   }
 
   const userInterests = interests.find((i) => i.id === id);
@@ -179,10 +187,10 @@ app.post("/interests/delete", (req, res) => {
   const { id } = req.body;
   const interestIndex = interests.findIndex((i) => i.id === id);
   if (interestIndex === -1) {
-    return res.status(404).json({ error: "Interests not found." });
+    return res.status(404).json({ error: "zaluby neboli najdene" });
   }
   interests.splice(interestIndex, 1);
-  res.send({ message: "Interests successfully deleted." });
+  res.send({ message: "zaluby pouzivatela boli vymazane uspesne." });
 });
 
 // Start the server
