@@ -12,24 +12,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const users = [];
-const interests = []; // Initialize an empty array for interests
-app.use(express.json()); // To handle JSON requests
+const interests = []; 
+app.use(express.json()); 
 
-// Cesta ku users.json
 const configPath = path.join(__dirname, 'users.json');
+
 //SIMON MARCINOV - LOGIN REGISTER
-// Login endpoint
 app.post('/login', (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required.' });
+    return res.status(400).json({ error: 'polia email a heslo su povinne.' });
   }
 
   fs.readFile(configPath, 'utf-8', (err, data) => {
     if (err) {
-      console.error('Error reading config file:', err);
-      return res.status(500).json({ error: 'Internal server error.' });
+      console.error('nastal error pri citani konfiguracneho suboru:', err);
+      return res.status(500).json({ error: 'problem sa serveri.' });
     }
 
     try {
@@ -39,13 +38,13 @@ app.post('/login', (req, res) => {
       );
 
       if (user) {
-        return res.status(200).json({ message: 'Login successful!' });
+        return res.status(200).json({ message: 'Prihlasenie bolo uspesne.' });
       } else {
-        return res.status(401).json({ error: 'Invalid email or password.' });
+        return res.status(401).json({ error: 'Nespravny email / heslo' });
       }
     } catch (parseErr) {
-      console.error('Error parsing config file:', parseErr);
-      return res.status(500).json({ error: 'Internal server error.' });
+      console.error('chyba pri analyze konfiguracneho suboru:', parseErr);
+      return res.status(500).json({ error: 'problem na serveri.' });
     }
   });
 });
@@ -54,41 +53,40 @@ app.post('/register', (req, res) => {
   const { email, username, password, age, gender, socialNetworks, interests } = req.body;
 
   if (!email || !username || !password || !age || !gender || !socialNetworks || !interests) {
-    return res.status(400).json({ error: 'All fields are required.' });
+    return res.status(400).json({ error: 'vsetky polia su povinne.' });
   }
   if (isNaN(age) || age <= 0) {
-    return res.status(400).json({ error: 'Age must be a positive number.' });
+    return res.status(400).json({ error: 'vek musi byt kladne cislo... wow.' });
   }
   const id = crypto.randomBytes(16).toString('hex');
   fs.readFile(configPath, 'utf-8', (err, data) => {
     if (err) {
-      console.error('Error reading config file:', err);
-      return res.status(500).json({ error: 'Internal server error.' });
+      console.error('error pri analyze konfiguracneho suboru', err);
+      return res.status(500).json({ error: 'problem na serveri.' });
     }
 
     try {
       const config = JSON.parse(data);
       if (config.users.some((u) => u.email === email)) {
-        return res.status(409).json({ error: 'Email already exists.' });
-      }
-      if (config.users.some((u) => u.username === username)) {
-        return res.status(409).json({ error: 'Username already exists.' });
+        return res.status(409).json({ error: 'ucet s tym emailom uz existuje... nechcete sa skor prihlasit?' });
       }
       const newUser = { id, email, username, password, age, gender, socialNetworks, interests };
       config.users.push(newUser);
       fs.writeFile(configPath, JSON.stringify(config, null, 2), (writeErr) => {
         if (writeErr) {
           console.error('Error writing to config file:', writeErr);
-          return res.status(500).json({ error: 'Internal server error.' });
+          return res.status(500).json({ error: 'problem na serveri' });
         }
-        return res.status(201).json({ message: 'User registered successfully!', user: newUser });
+        return res.status(201).json({ message: 'zaregistrovali ste sa uspesne.', user: newUser });
       });
     } catch (parseErr) {
       console.error('Error parsing config file:', parseErr);
-      return res.status(500).json({ error: 'Internal server error.' });
+      return res.status(500).json({ error: 'problem na serveri' });
     }
   });
 });
+
+
 //PETER BEDNAR - USERS
 app.post("/users/create", (req, res) => {
   const { username, age, gender, socialNetworks, interests: userInterests } = req.body;
@@ -99,17 +97,12 @@ app.post("/users/create", (req, res) => {
 
   const id = crypto.randomBytes(16).toString("hex");
   const newUser = { id, username, age, gender, socialNetworks, interests: userInterests };
-
-  // Add the user to the `users` array
   users.push(newUser);
 
-  // Add the user's interests to the `interests` array
   const existingInterestEntry = interests.find((entry) => entry.id === id);
   if (existingInterestEntry) {
-    // If the user already exists in the interests array, merge their interests
     existingInterestEntry.interests = [...new Set([...existingInterestEntry.interests, ...userInterests])];
   } else {
-    // If the user doesn't exist in the interests array, add a new entry
     interests.push({ id, interests: userInterests });
   }
   res.status(201).json(newUser);
@@ -120,7 +113,7 @@ app.get("/users/list", (req, res) => {
 });
 
 app.get("/users/read", (req, res) => {
-  const { id } = req.body; // Changed from req.query to req.body
+  const { id } = req.body;
 
   if (!id) {
     return res.status(400).json({ error: "User ID is required." });
@@ -158,12 +151,13 @@ app.post("/users/delete", (req, res) => {
   res.json({ message: "User successfully deleted" });
 });
 
-// List all interests
+
+//JAKUB KNUT - INTERESTS
+
 app.get("/interests/list", (req, res) => {
   res.send(interests);
 });
-//JAKUB KNUT - INTERESTS
-// Add interests for a user
+
 app.post("/interests/add", (req, res) => {
   const { id, interests: newInterests } = req.body;
   const user = users.find((u) => u.id === id);
@@ -181,7 +175,6 @@ app.post("/interests/add", (req, res) => {
   res.status(201).send({ id, interests: newInterests });
 });
 
-// Delete interests for a user
 app.post("/interests/delete", (req, res) => {
   const { id } = req.body;
   const interestIndex = interests.findIndex((i) => i.id === id);
