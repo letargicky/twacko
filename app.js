@@ -92,7 +92,18 @@ app.post('/register', async (req, res) => {
   }
 
   const { salt, hash } = hashPassword(password);
-  users.push({ email, username, passwordHash: hash, salt, age, gender, socialNetworks, interests });
+  const newUser = {
+    email,
+    username,
+    passwordHash: hash,
+    salt,
+    age,
+    gender,
+    socialNetworks,
+    interests,
+  };
+
+  users.push(newUser);
 
   await ulozPouzivatelov(users);
   res.status(201).json({ message: 'Používateľ bol úspešne zaregistrovaný.' });
