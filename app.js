@@ -14,7 +14,8 @@ app.use(express.urlencoded({ extended: true }));
 // Funkcia na načítanie používateľov
 async function nacitajPouzivatelov() {
   try {
-    const response = await get(BLOB_URL);
+    const response = await fetch(BLOB_URL);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.text();
     return JSON.parse(data) || [];
   } catch (error) {
@@ -27,10 +28,15 @@ async function nacitajPouzivatelov() {
 async function ulozPouzivatelov(users) {
   try {
     const jsonString = JSON.stringify(users, null, 2);
-    await put('users-Tjs9UZGKNBkeiTal87UbrsJ6CiS378.json', jsonString, {
-      access: 'public',
-      contentType: 'application/json',
+    const response = await fetch(BLOB_URL, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonString,
     });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    console.log('Používatelia boli úspešne uložené.');
   } catch (error) {
     console.error('Chyba pri ukladaní používateľov:', error);
   }
@@ -112,6 +118,27 @@ app.post('/login', async (req, res) => {
   }
 
   res.status(200).json({ message: 'Prihlásenie bolo úspešné.', username: user.username });
+});
+
+// Endpoint na získanie zoznamu používateľov
+app.get('/users', async (req, res) => {
+  const users = await nacitajPouzivatelov();
+  res.status(200).json(users);
+});
+
+// Endpoint na vymazanie používateľa
+app.delete('/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const users = await nacitajPouzivatelov();
+  const index = users.findIndex((user) => user.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: 'Používateľ nebol nájdený.' });
+  }
+
+  users.splice(index, 1);
+  await ulozPouzivatelov(users);
+  res.status(200).json({ message: 'Používateľ bol vymazaný.' });
 });
 
 // Spustenie servera
