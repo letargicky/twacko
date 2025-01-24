@@ -17,10 +17,6 @@ app.use(express.json());
 
 const configPath = path.join(__dirname, 'users.json');
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'webovka', 'index.html'));
-});
-
 //        ╦    ╔═╗  ╔═╗  ╦  ╔╗╔       ╦═╗  ╔═╗  ╔═╗  ╦  ╔═╗  ╔╦╗  ╔═╗  ╦═╗  
 //        ║    ║ ║  ║ ╦  ║  ║║║  ───  ╠╦╝  ║╣   ║ ╦  ║  ╚═╗   ║   ║╣   ╠╦╝  
 //        ╩═╝  ╚═╝  ╚═╝  ╩  ╝╚╝       ╩╚═  ╚═╝  ╚═╝  ╩  ╚═╝   ╩   ╚═╝  ╩╚═  - urobil Simon Marcinov
