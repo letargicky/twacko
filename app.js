@@ -2,10 +2,12 @@ const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
 const fetch = require('node-fetch');
+require('dotenv').config();  // Načítanie .env súboru
 
 const app = express();
 const port = 8000;
 const BLOB_URL = 'https://osmlu7cyjhebbdpp.public.blob.vercel-storage.com/usr/users-Tjs9UZGKNBkeiTal87UbrsJ6CiS378.json';
+const BLOB_API_KEY = process.env.BLOB_API_KEY;
 
 app.use(cors());
 app.use(express.json());
@@ -33,7 +35,7 @@ async function ulozPouzivatelov(users) {
       method: 'PUT',  // Uloženie dát cez PUT request
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer YOUR_BLOB_STORAGE_API_KEY`  // Tvoje API kľúč sem
+        'Authorization': `Bearer ${BLOB_API_KEY}`  // Použitie API kľúča zo .env
       },
       body: jsonString
     });
@@ -47,7 +49,6 @@ async function ulozPouzivatelov(users) {
     console.error('Chyba pri ukladaní používateľov:', error);
   }
 }
-
 // Funkcia na hashovanie hesla
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex');
