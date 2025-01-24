@@ -12,14 +12,13 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Funkcia na načítanie používateľov
-// Funkcia na načítanie používateľov
 async function nacitajPouzivatelov() {
   try {
     const response = await fetch(BLOB_URL);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.text();
     const users = JSON.parse(data);
-    return Array.isArray(users) ? users : [];  // Overenie, že users sú pole
+    return Array.isArray(users) ? users : [];
   } catch (error) {
     console.error('Chyba pri načítaní používateľov:', error);
     return [];
@@ -34,7 +33,7 @@ async function ulozPouzivatelov(users) {
       method: 'PUT',  // Uloženie dát cez PUT request
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer YOUR_BLOB_STORAGE_API_KEY`  // Tvoje API kľúč tu
+        'Authorization': `Bearer YOUR_BLOB_STORAGE_API_KEY`  // Tvoje API kľúč sem
       },
       body: jsonString
     });
@@ -48,7 +47,6 @@ async function ulozPouzivatelov(users) {
     console.error('Chyba pri ukladaní používateľov:', error);
   }
 }
-
 
 // Funkcia na hashovanie hesla
 function hashPassword(password) {
@@ -99,18 +97,7 @@ app.post('/register', async (req, res) => {
   }
 
   const { salt, hash } = hashPassword(password);
-  const newUser = {
-    email,
-    username,
-    passwordHash: hash,
-    salt,
-    age,
-    gender,
-    socialNetworks,
-    interests,
-  };
-
-  users.push(newUser);
+  users.push({ email, username, passwordHash: hash, salt, age, gender, socialNetworks, interests });
 
   await ulozPouzivatelov(users);
   res.status(201).json({ message: 'Používateľ bol úspešne zaregistrovaný.' });
@@ -137,27 +124,6 @@ app.post('/login', async (req, res) => {
   }
 
   res.status(200).json({ message: 'Prihlásenie bolo úspešné.', username: user.username });
-});
-
-// Endpoint na získanie všetkých používateľov
-app.get('/users', async (req, res) => {
-  const users = await nacitajPouzivatelov();
-  res.status(200).json(users);
-});
-
-// Endpoint na vymazanie používateľa
-app.delete('/users/:id', async (req, res) => {
-  const { id } = req.params;
-  const users = await nacitajPouzivatelov();
-  const index = users.findIndex((user) => user.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: 'Používateľ nebol nájdený.' });
-  }
-
-  users.splice(index, 1);
-  await ulozPouzivatelov(users);
-  res.status(200).json({ message: 'Používateľ bol vymazaný.' });
 });
 
 // Spustenie servera
