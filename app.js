@@ -1,7 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
 const cors = require('cors');
-const { put, get } = require('@vercel/blob');
 
 const app = express();
 const port = 8000;
