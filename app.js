@@ -12,13 +12,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Funkcia na načítanie používateľov
+// Funkcia na načítanie používateľov
 async function nacitajPouzivatelov() {
   try {
     const response = await fetch(BLOB_URL);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.text();
     const users = JSON.parse(data);
-    return Array.isArray(users) ? users : [];
+    return Array.isArray(users) ? users : [];  // Overenie, že users sú pole
   } catch (error) {
     console.error('Chyba pri načítaní používateľov:', error);
     return [];
@@ -30,18 +31,24 @@ async function ulozPouzivatelov(users) {
   try {
     const jsonString = JSON.stringify(users, null, 2);
     const response = await fetch(BLOB_URL, {
-      method: 'PUT',
+      method: 'PUT',  // Uloženie dát cez PUT request
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer YOUR_BLOB_STORAGE_API_KEY`  // Tvoje API kľúč tu
       },
-      body: jsonString,
+      body: jsonString
     });
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    console.log('Používatelia boli úspešne uložené.');
+
+    if (!response.ok) {
+      throw new Error('Chyba pri ukladaní používateľov do BLOB-u.');
+    }
+
+    console.log('Dáta boli úspešne uložené do BLOB-u.');
   } catch (error) {
     console.error('Chyba pri ukladaní používateľov:', error);
   }
 }
+
 
 // Funkcia na hashovanie hesla
 function hashPassword(password) {
