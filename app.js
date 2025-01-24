@@ -17,7 +17,8 @@ async function nacitajPouzivatelov() {
     const response = await fetch(BLOB_URL);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.text();
-    return JSON.parse(data) || [];
+    const users = JSON.parse(data);
+    return Array.isArray(users) ? users : [];
   } catch (error) {
     console.error('Chyba pri načítaní používateľov:', error);
     return [];
@@ -86,7 +87,7 @@ app.post('/register', async (req, res) => {
   }
 
   const users = await nacitajPouzivatelov();
-  if (Array.isArray(users) && users.some((user) => user.email === email)) {
+  if (users.some((user) => user.email === email)) {
     return res.status(400).json({ message: 'Používateľ už existuje.' });
   }
 
@@ -106,7 +107,7 @@ app.post('/login', async (req, res) => {
   }
 
   const users = await nacitajPouzivatelov();
-  const user = Array.isArray(users) ? users.find((u) => u.email === email) : null;
+  const user = users.find((u) => u.email === email);
 
   if (!user) {
     return res.status(401).json({ message: 'Nesprávny email alebo heslo.' });
@@ -120,7 +121,7 @@ app.post('/login', async (req, res) => {
   res.status(200).json({ message: 'Prihlásenie bolo úspešné.', username: user.username });
 });
 
-// Endpoint na získanie zoznamu používateľov
+// Endpoint na získanie všetkých používateľov
 app.get('/users', async (req, res) => {
   const users = await nacitajPouzivatelov();
   res.status(200).json(users);
@@ -130,7 +131,7 @@ app.get('/users', async (req, res) => {
 app.delete('/users/:id', async (req, res) => {
   const { id } = req.params;
   const users = await nacitajPouzivatelov();
-  const index = Array.isArray(users) ? users.findIndex((user) => user.id === id) : -1;
+  const index = users.findIndex((user) => user.id === id);
 
   if (index === -1) {
     return res.status(404).json({ message: 'Používateľ nebol nájdený.' });
